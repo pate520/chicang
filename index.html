@@ -276,6 +276,33 @@
             color: #333;
         }
 
+        /* 异常 UID 样式 */
+        .uid-abnormal {
+            color: var(--danger-color) !important;
+            font-weight: 700 !important;
+        }
+
+        /* 复选框容器样式 */
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .filter-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        .filter-checkbox-label {
+            font-weight: 500;
+            color: #333;
+        }
+
         /* 展开详情区域 */
         .detail-row {
             display: none;
@@ -495,16 +522,32 @@
                         filterTable();
                     }
 
+                    // 异常 UID 列表（后续会从线上另一个表取值）
+                    const ABNORMAL_UIDS = ['81072943'];
+
                     function filterTable() {
                         const section = document.getElementById('marketSectionSelect').value;
                         const contract = document.getElementById('contractSelect').value;
+                        const abnormalOnly = document.getElementById('abnormalUidCheckbox')?.checked || false;
                         const rows = document.querySelectorAll('.ranking-table .user-row');
                         let rank = 1;
 
                         rows.forEach(row => {
                             const rowSection = row.getAttribute('data-section');
                             const rowContract = row.getAttribute('data-contract');
+                            const uidCell = row.querySelector('.uid');
+                            const uid = uidCell ? uidCell.innerText.trim() : '';
                             const detailRow = row.nextElementSibling;
+                            const isAbnormal = ABNORMAL_UIDS.includes(uid);
+
+                            // 为异常 UID 添加/移除红色样式
+                            if (uidCell) {
+                                if (isAbnormal) {
+                                    uidCell.classList.add('uid-abnormal');
+                                } else {
+                                    uidCell.classList.remove('uid-abnormal');
+                                }
+                            }
 
                             let show = true;
 
@@ -514,12 +557,29 @@
                             // Filter by contract (skip if 'all' or empty)
                             if (contract && contract !== 'all' && rowContract !== contract) show = false;
 
+                            // Filter by abnormal UID
+                            if (abnormalOnly && !isAbnormal) show = false;
+
                             if (show) {
                                 row.style.display = '';
                                 row.querySelector('.rank').innerText = rank++;
                             } else {
                                 row.style.display = 'none';
-                                detailRow.style.display = 'none'; // Avoid detail row staying open if parent hidden
+                                if (detailRow) {
+                                    detailRow.style.display = 'none'; // Avoid detail row staying open if parent hidden
+                                }
+                            }
+                        });
+                    }
+
+                    // 初始化异常 UID 样式
+                    function initAbnormalUidStyles() {
+                        document.querySelectorAll('.uid').forEach(uidCell => {
+                            const uid = uidCell.innerText.trim();
+                            if (ABNORMAL_UIDS.includes(uid)) {
+                                uidCell.classList.add('uid-abnormal');
+                            } else {
+                                uidCell.classList.remove('uid-abnormal');
                             }
                         });
                     }
@@ -527,6 +587,7 @@
                     // Initialize on page load
                     window.addEventListener('DOMContentLoaded', function () {
                         updateContractOptions();
+                        initAbnormalUidStyles();
                     });
                 </script>
                 <div class="filter-item">
@@ -535,6 +596,12 @@
                         <option value="normal">普通用户</option>
                         <option value="internal">内部用户</option>
                     </select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-checkbox">
+                        <input type="checkbox" id="abnormalUidCheckbox" onchange="filterTable()">
+                        <span class="filter-checkbox-label">仅显示异常 UID</span>
+                    </label>
                 </div>
             </div>
             <div class="filter-row">
