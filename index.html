@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合约持仓排名</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --primary-color: #1890ff;
+            --text-primary: #333;
+            --border-color: #d9d9d9;
+            --bg-body: #f0f2f5;
+            --bg-white: #fff;
+            --danger-color: #ff4d4f;
+            --success-color: #52c41a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--bg-body);
+            padding: 24px;
+        }
+
+        .main-card {
+            background: var(--bg-white);
+            padding: 24px;
+            border-radius: 4px;
+        }
+
+        /* 筛选区域 */
+        .filter-section {
+            margin-bottom: 24px;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-weight: 500;
+            white-space: nowrap;
+            color: #333;
+        }
+
+        .filter-input,
+        .filter-select {
+            height: 32px;
+            padding: 4px 11px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 160px;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+
+        /* 带图标的输入框容器 */
+        .input-icon-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .input-icon-wrapper i {
+            position: absolute;
+            left: 10px;
+            color: #bfbfbf;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .input-icon-wrapper input,
+        .input-icon-wrapper select {
+            padding-left: 30px;
+            /* 为图标留出空间 */
+        }
+
+        .btn {
+            height: 32px;
+            padding: 0 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+
+        .btn-default {
+            background: #fff;
+            border-color: var(--border-color);
+            color: #666;
+        }
+
+        .btn-default:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .warning-text {
+            color: var(--danger-color);
+            font-size: 12px;
+        }
+
+        /* 统计区域 - 严格还原截图样式 */
+        .stats-section {
+            padding: 16px;
+            background: #f8f9fa;
+            /* 接近截图的浅灰背景 */
+            margin-bottom: 24px;
+        }
+
+        .stats-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .stats-indicator {
+            width: 4px;
+            height: 16px;
+            background: var(--primary-color);
+            margin-right: 8px;
+        }
+
+        .stats-title-text {
+            color: #333;
+            font-weight: 500;
+            margin-right: 8px;
+        }
+
+        .stats-warning {
+            color: var(--danger-color);
+            font-weight: 500;
+        }
+
+        .stat-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            /* 行间距 */
+        }
+
+        .stat-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            /* 每一项之间的间距 */
+            font-size: 13px;
+        }
+
+        .stat-item {
+            color: #666;
+        }
+
+        .stat-value {
+            color: #1890ff;
+            /* 截图中的蓝色数值 */
+            margin-left: 4px;
+        }
+
+        /* 主表格 */
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .ranking-table th {
+            background: #fafafa;
+            padding: 12px 8px;
+            text-align: center;
+            /* 改为居中对齐 */
+            font-weight: 500;
+            border-bottom: 1px solid #e8e8e8;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            vertical-align: middle;
+            /* 垂直居中 */
+        }
+
+        .ranking-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .ranking-table th.sortable:hover {
+            background: #f0f0f0;
+        }
+
+        .ranking-table th .sort-icon {
+            color: #bfbfbf;
+            margin-left: 4px;
+            font-size: 10px;
+        }
+
+        .ranking-table th.sorted-asc .sort-icon,
+        .ranking-table th.sorted-desc .sort-icon {
+            color: var(--primary-color);
+        }
+
+        .ranking-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+            text-align: center;
+            /* 内容也居中 */
+        }
+
+        .ranking-table tbody tr:hover>td {
+            background: #fafafa;
+        }
+
+        .ranking-table .expand-btn {
+            cursor: pointer;
+            color: #999;
+            transition: transform 0.2s;
+        }
+
+        .ranking-table .expand-btn.open {
+            transform: rotate(90deg);
+        }
+
+        /* 用户行样式 */
+        .user-row {
+            background: #fff;
+        }
+
+        .user-row .uid {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .user-row .rank {
+            font-weight: 700;
+            color: #333;
+        }
+
+        /* 展开详情区域 */
+        .detail-row {
+            display: none;
+        }
+
+        .detail-row.open {
+            display: table-row;
+        }
+
+        .detail-row>td {
+            padding: 0;
+            background: #f9f9f9;
+        }
+
+        .detail-content {
+            padding: 16px 16px 16px 48px;
+        }
+
+        .detail-section {
+            margin-bottom: 16px;
+        }
+
+        .detail-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-section-title .badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .detail-section-title .badge-open {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+        .detail-section-title .badge-closed {
+            background: #f5f5f5;
+            color: #8c8c8c;
+        }
+
+        /* 明细表格 */
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+        }
+
+        .detail-table th {
+            background: #f5f5f5;
+            padding: 8px;
+            text-align: center;
+            /* 改为居中 */
+            font-weight: 500;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .detail-table td {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: center;
+            /* 改为居中 */
+        }
+
+        .detail-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* .detail-table .th-closed {
+            background: #fff2f0;
+            color: var(--danger-color);
+        }
+
+        .detail-table .text-closed {
+            color: var(--danger-color);
+            font-weight: 700;
+        } */
+
+        /* 徽章和颜色 */
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-long {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+
+        .badge-short {
+            background: #fff1f0;
+            color: #ff4d4f;
+        }
+
+        .val-pos {
+            color: #52c41a;
+            font-weight: 600;
+        }
+
+        .val-neg {
+            color: #ff4d4f;
+            font-weight: 600;
+        }
+
+        /* 无数据提示 */
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-card">
+        <!-- 筛选区域 -->
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <span class="filter-label">币种板块</span>
+                    <select id="marketSectionSelect" class="filter-select"
+                        onchange="updateContractOptions(); filterTable()">
+                        <option value="">全部板块</option>
+                        <option value="mainstream">主流币</option>
+                        <option value="innovation">项目币</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <span class="filter-label">合约名称</span>
+                    <select id="contractSelect" class="filter-select" onchange="filterTable()">
+                        <!-- Options populated by JS -->
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <span class="filter-label">用户UID</span>
+                    <input type="text" class="filter-input" placeholder="输入用户UID">
+                </div>
+                <!-- JS for cascading logic -->
+                <script>
+                    const allContracts = [
+                        { value: "BTC/USDT", section: "mainstream", label: "BTC/USDT" },
+                        { value: "ETH/USDT", section: "mainstream", label: "ETH/USDT" },
+                        { value: "SOL/USDT", section: "innovation", label: "SOL/USDT" },
+                        { value: "DOGE/USDT", section: "innovation", label: "DOGE/USDT" },
+                        { value: "PEPE/USDT", section: "innovation", label: "PEPE/USDT" }
+                    ];
+
+                    function updateContractOptions() {
+                        const sectionSelect = document.getElementById('marketSectionSelect');
+                        const contractSelect = document.getElementById('contractSelect');
+                        const selectedSection = sectionSelect.value;
+                        const currentContract = contractSelect.value;
+
+                        // Clear current options
+                        contractSelect.innerHTML = '';
+
+                        // Always add empty placeholder option first (for Select2 placeholder)
+                        const placeholderOption = document.createElement('option');
+                        placeholderOption.value = '';
+                        placeholderOption.innerText = '';
+                        contractSelect.appendChild(placeholderOption);
+
+                        // Show "All" option when a specific section is selected
+                        if (selectedSection) {
+                            const allOption = document.createElement('option');
+                            allOption.value = 'all';
+                            allOption.innerText = selectedSection === 'mainstream' ? '全部主流币' : '全部项目币';
+                            contractSelect.appendChild(allOption);
+                        }
+
+                        // Filter and append options
+                        const filtered = selectedSection
+                            ? allContracts.filter(c => c.section === selectedSection)
+                            : allContracts;
+
+                        filtered.forEach(c => {
+                            const option = document.createElement('option');
+                            option.value = c.value;
+                            option.innerText = c.label;
+                            contractSelect.appendChild(option);
+                        });
+
+                        // Try to restore selection if valid
+                        if (currentContract && (currentContract === 'all' || filtered.find(c => c.value === currentContract))) {
+                            contractSelect.value = currentContract;
+                        } else if (selectedSection) {
+                            // Default to "All xx" when a section is selected
+                            contractSelect.value = 'all';
+                        }
+                        // else: no section selected, keep placeholder
+
+                        // Refresh Select2 display
+                        if (typeof $ !== 'undefined' && $('#contractSelect').data('select2')) {
+                            $('#contractSelect').trigger('change.select2');
+                        }
+
+                        // Apply filter immediately after updating options
+                        filterTable();
+                    }
+
+                    function filterTable() {
+                        const section = document.getElementById('marketSectionSelect').value;
+                        const contract = document.getElementById('contractSelect').value;
+                        const rows = document.querySelectorAll('.ranking-table .user-row');
+                        let rank = 1;
+
+                        rows.forEach(row => {
+                            const rowSection = row.getAttribute('data-section');
+                            const rowContract = row.getAttribute('data-contract');
+                            const detailRow = row.nextElementSibling;
+
+                            let show = true;
+
+                            // Filter by section
+                            if (section && rowSection !== section) show = false;
+
+                            // Filter by contract (skip if 'all' or empty)
+                            if (contract && contract !== 'all' && rowContract !== contract) show = false;
+
+                            if (show) {
+                                row.style.display = '';
+                                row.querySelector('.rank').innerText = rank++;
+                            } else {
+                                row.style.display = 'none';
+                                detailRow.style.display = 'none'; // Avoid detail row staying open if parent hidden
+                            }
+                        });
+                    }
+
+                    // Initialize on page load
+                    window.addEventListener('DOMContentLoaded', function () {
+                        updateContractOptions();
+                    });
+                </script>
+                <div class="filter-item">
+                    <span class="filter-label">用户类型</span>
+                    <select class="filter-select">
+                        <option value="normal">普通用户</option>
+                        <option value="internal">内部用户</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-item">
+                    <span class="filter-label">时间范围</span>
+                    <!-- 1. 日期选择 -->
+                    <div class="input-icon-wrapper">
+                        <i class="far fa-calendar-alt"></i>
+                        <input type="date" class="filter-input" style="width: 140px;">
+                    </div>
+
+                    <!-- 2. 截止时间选择 (每15分钟一档) -->
+                    <div class="input-icon-wrapper">
+                        <i class="far fa-clock"></i>
+                        <select id="endTimeSelect" class="filter-select" style="width: 140px;">
+                            <option value="" disabled selected>截止时间</option>
+                            <!-- JS will populate options here -->
+                        </select>
+                    </div>
+                </div>
+                <span class="warning-text">(*筛选该日期00:00至选定截止时间的数据)</span>
+            </div>
+            <div class="filter-row">
+                <button class="btn btn-primary"><i class="fas fa-search"></i> 搜索</button>
+                <button class="btn btn-default"><i class="fas fa-sync-alt"></i> 重置</button>
+                <button class="btn btn-default"><i class="fas fa-download"></i> 导出</button>
+            </div>
+        </div>
+
+        <!-- 统计区域 -->
+        <div class="stats-section">
+            <div class="stats-header">
+                <div class="stats-indicator"></div>
+                <span class="stats-title-text">合约级别（必须选择合约名称和用户类型）</span>
+                <span class="stats-warning">(*查询快照时汇总数据仅为普通用户数据,仅支持快照范围查询条件)</span>
+            </div>
+            <div class="stat-rows">
+                <!-- 第一行 -->
+                <div class="stat-row">
+                    <div class="stat-item">持有合约人数: <span class="stat-value">70</span></div>
+                    <div class="stat-item">已购买合约人数: <span class="stat-value">86</span></div>
+                    <div class="stat-item">合约开仓保证金总额: <span class="stat-value">101691.13</span></div>
+                    <div class="stat-item">做多仓位价值总额: <span class="stat-value">2,905,177.00</span></div>
+                    <div class="stat-item">做空仓位价值总额: <span class="stat-value">1,197,658.24</span></div>
+                </div>
+                <!-- 第二行 -->
+                <div class="stat-row">
+                    <div class="stat-item">合约未实现盈亏总额: <span class="stat-value">114808902.39</span></div>
+                    <div class="stat-item">合约已实现盈亏总额: <span class="stat-value">-51349.39</span></div>
+                    <div class="stat-item">持有此合约用户的总合约账户余额: <span class="stat-value">114910593.52</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 方案一：按持仓记录展示 ========== -->
+        <h2
+            style="font-size: 16px; font-weight: 600; margin: 24px 0 16px 0; padding-bottom: 12px; border-bottom: 1px solid #e8e8e8;">
+            <i class="fas fa-chart-line" style="color: #1890ff; margin-right: 8px;"></i>
+            方案一：按币对展示
+        </h2>
+        <p style="color: #666; font-size: 13px; margin-bottom: 16px;">
+            同一用户持有多个币对时，每个币对单独一行。
+        </p>
+
+        <!-- 用户排名主表 -->
+        <div style="overflow-x: auto;">
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th style="width:30px;"></th>
+                        <th>序号</th>
+                        <th>用户UID</th>
+                        <th>合约名称</th>
+                        <th class="sortable">开仓保证金 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable sorted-desc">总仓位价值 <i class="fas fa-sort-down sort-icon"></i></th>
+                        <th class="sortable">总未实现盈亏 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable">总已实现盈亏 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable">当前合约账户余额<br>（未实现盈亏和当前占用的保证金） <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable">合约持仓比例<br>（开仓总保证金/当前合约账户总余额） <i class="fas fa-sort sort-icon"></i></th>
+                        <th>用户总入金<br>（包含法币）</th>
+                        <th>用户总出金<br>（包含法币）</th>
+                        <th>用户净入金<br>（包含法币）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 用户1 -->
+                    <tr class="user-row" onclick="toggleDetail(this)" data-section="mainstream"
+                        data-contract="BTC/USDT">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">1</td>
+                        <td class="uid">81072943</td>
+                        <td>BTC/USDT</td>
+                        <td>32,833.33</td>
+                        <td>620,000</td>
+                        <td class="val-neg">-115,724</td>
+                        <td class="val-pos">+4,500</td>
+                        <td>3,088,846.86</td>
+                        <td>0.067</td>
+                        <td>500,000</td>
+                        <td>0</td>
+                        <td>500,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <!-- 持仓中 -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-open">持仓中</span> 2笔持仓
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>加减仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>追加保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>止盈价/止盈数量</th>
+                                                <th>止损价/止损数量</th>
+                                                <th>预估爆仓价</th>
+                                                <th>总未实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-14 20:41</td>
+                                                <td>--</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>20,833.33</td>
+                                                <td>0</td>
+                                                <td>24x</td>
+                                                <td>500,000</td>
+                                                <td>--</td>
+                                                <td>--</td>
+                                                <td>15,897</td>
+                                                <td class="val-neg">-127,724</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-14 21:00</td>
+                                                <td>--</td>
+                                                <td>逐仓</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>12,000.00</td>
+                                                <td>0</td>
+                                                <td>10x</td>
+                                                <td>120,000</td>
+                                                <td>50,000 / 1.5</td>
+                                                <td>65,000 / 1.5</td>
+                                                <td>68,000</td>
+                                                <td class="val-pos">+12,000</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- 已平仓 -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-closed">已平仓</span> 1笔平仓记录
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th class="th-closed">平仓时间</th>
+                                                <th class="th-closed">平仓价格</th>
+                                                <th>总已实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="color:#999;"><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-10 10:00</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>5,000.00</td>
+                                                <td>20x</td>
+                                                <td>100,000</td>
+                                                <td class="text-closed">2025-08-12 15:30</td>
+                                                <td class="text-closed">58,500</td>
+                                                <td class="val-pos">+4,500</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户2 (展示 Timeline 假数据 User / 使用 SOL) -->
+                    <tr class="user-row" onclick="toggleDetail(this)" data-section="innovation"
+                        data-contract="SOL/USDT">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">2</td>
+                        <td class="uid">99283712</td>
+                        <td>SOL/USDT</td>
+                        <td>12,000.00</td>
+                        <td>240,000</td>
+                        <td class="val-pos">+52,000</td>
+                        <td class="val-neg">-3,200</td>
+                        <td>128,846.86</td>
+                        <td>0.093</td>
+                        <td>100,000</td>
+                        <td>20,000</td>
+                        <td>80,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-open">持仓中</span> 1笔持仓
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>加减仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>追加保证金</th>
+                                                <th>开仓均价</th>
+                                                <th>当前价格</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>止盈价/止盈数量</th>
+                                                <th>止损价/止损数量</th>
+                                                <th>预估爆仓价</th>
+                                                <th>未实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>SOL/USDT</strong></td>
+                                                <td>2025-08-18 10:20</td>
+                                                <td>--</td>
+                                                <td>逐仓</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>12,000.00</td>
+                                                <td>0</td>
+                                                <td>145.00</td>
+                                                <td>158.00</td>
+                                                <td>20x</td>
+                                                <td>240,000</td>
+                                                <td>180.00 / 1000</td>
+                                                <td>130.00 / 1000</td>
+                                                <td>138.50</td>
+                                                <td class="val-pos">+52,000</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-closed">已平仓</span> 1笔平仓记录
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th class="th-closed">平仓时间</th>
+                                                <th class="th-closed">平仓价格</th>
+                                                <th>已实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="color:#999;"><strong>SOL/USDT</strong></td>
+                                                <td>2025-08-17 09:00</td>
+                                                <td>逐仓</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>5,000.00</td>
+                                                <td>20x</td>
+                                                <td>100,000</td>
+                                                <td class="text-closed">2025-08-17 11:30</td>
+                                                <td class="text-closed">139.50</td>
+                                                <td class="val-neg">-3,200</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户1 的第二条数据 (同UID, 不同币对 ETH/USDT) -->
+                    <tr class="user-row" onclick="toggleDetail(this)" data-section="mainstream"
+                        data-contract="ETH/USDT">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">3</td>
+                        <td class="uid">81072943</td> <!-- 相同的 UID -->
+                        <td>ETH/USDT</td> <!-- 不同的币对 -->
+                        <td>5,000.00</td>
+                        <td>50,000</td>
+                        <td class="val-neg">-1,200</td>
+                        <td class="val-pos">+800</td>
+                        <td>3,088,846.86</td>
+                        <td>0.002</td>
+                        <td>500,000</td>
+                        <td>0</td>
+                        <td>500,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-open">持仓中</span> 1笔持仓
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>加减仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>追加保证金</th>
+                                                <th>开仓均价</th>
+                                                <th>当前价格</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>止盈价/止盈数量</th>
+                                                <th>止损价/止损数量</th>
+                                                <th>预估爆仓价</th>
+                                                <th>未实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>ETH/USDT</strong></td>
+                                                <td>2025-08-16 09:30</td>
+                                                <td>--</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>5,000.00</td>
+                                                <td>0</td>
+                                                <td>3,200</td>
+                                                <td>3,250</td>
+                                                <td>10x</td>
+                                                <td>50,000</td>
+                                                <td>3,000 / 10</td>
+                                                <td>3,300 / 10</td>
+                                                <td>3,500</td>
+                                                <td class="val-neg">-1,200</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- User 1 ETH Closed Positions -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-closed">已平仓</span> 1笔平仓记录
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th class="th-closed">平仓时间</th>
+                                                <th class="th-closed">平仓价格</th>
+                                                <th>已实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="color:#999;"><strong>ETH/USDT</strong></td>
+                                                <td>2025-08-15 14:00</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>2,000.00</td>
+                                                <td>10x</td>
+                                                <td>20,000</td>
+                                                <td class="text-closed">2025-08-15 18:00</td>
+                                                <td class="text-closed">3,080</td>
+                                                <td class="val-pos">+800</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- 用户2 (原排名4) -->
+                    <tr class="user-row" onclick="toggleDetail(this)" data-section="mainstream"
+                        data-contract="BTC/USDT">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">4</td>
+                        <td class="uid">90869549</td>
+                        <td>BTC/USDT</td>
+                        <td>12,848.85</td>
+                        <td>642,442</td>
+                        <td class="val-pos">+932,650</td>
+                        <td class="val-pos">+50,000</td>
+                        <td>5,050,000.00</td>
+                        <td>0.014</td>
+                        <td>5,050,000</td>
+                        <td>0</td>
+                        <td>5,050,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-open">持仓中</span> 1笔持仓
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>加减仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>追加保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>止盈价/止盈数量</th>
+                                                <th>止损价/止损数量</th>
+                                                <th>预估爆仓价</th>
+                                                <th>总未实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-04 17:40</td>
+                                                <td>--</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>12,848.85</td>
+                                                <td>0</td>
+                                                <td>50x</td>
+                                                <td>642,442</td>
+                                                <td>--</td>
+                                                <td>--</td>
+                                                <td>--</td>
+                                                <td class="val-pos">+932,650</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-closed">已平仓</span> 1笔平仓记录
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th class="th-closed">平仓时间</th>
+                                                <th class="th-closed">平仓价格</th>
+                                                <th>总已实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="color:#999;"><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-01 10:00</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>500.00</td>
+                                                <td>20x</td>
+                                                <td>10,000</td>
+                                                <td class="text-closed">2025-08-02 10:00</td>
+                                                <td class="text-closed">58,000</td>
+                                                <td class="val-pos">+50,000</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户3 -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">3</td>
+                        <td class="uid">11223344</td>
+                        <td>BTC/USDT</td>
+                        <td>100,000.00</td>
+                        <td>200,000</td>
+                        <td class="val-neg">-500</td>
+                        <td class="val-neg">-1,000</td>
+                        <td>200,000.00</td>
+                        <td>0.500</td>
+                        <td>200,000</td>
+                        <td>0</td>
+                        <td>200,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-open">持仓中</span> 1笔持仓
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>加减仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>追加保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>止盈价/止盈数量</th>
+                                                <th>止损价/止损数量</th>
+                                                <th>预估爆仓价</th>
+                                                <th>总未实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-14 20:41</td>
+                                                <td>--</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>100,000</td>
+                                                <td>0</td>
+                                                <td>2x</td>
+                                                <td>200,000</td>
+                                                <td>--</td>
+                                                <td>--</td>
+                                                <td>25,000</td>
+                                                <td class="val-neg">-500</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-closed">已平仓</span> 1笔平仓记录
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th class="th-closed">平仓时间</th>
+                                                <th class="th-closed">平仓价格</th>
+                                                <th>总已实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="color:#999;"><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-14 10:00</td>
+                                                <td>逐仓</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>2,800</td>
+                                                <td>10x</td>
+                                                <td>28,000</td>
+                                                <td class="text-closed">2025-08-14 12:00</td>
+                                                <td class="text-closed">57,500</td>
+                                                <td class="val-neg">-1,000</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户4 -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">4</td>
+                        <td class="uid">55667788</td>
+                        <td>BTC/USDT</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>--</td>
+                        <td class="val-pos">+8,000</td>
+                        <td>108,000.00</td>
+                        <td>0</td>
+                        <td>100,000</td>
+                        <td>0</td>
+                        <td>100,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-open">持仓中</span>
+                                    </div>
+                                    <div class="no-data">暂无持仓记录</div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-section-title">
+                                        <span class="badge badge-closed">已平仓</span> 2笔平仓记录
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>合约名称</th>
+                                                <th>开仓时间</th>
+                                                <th>全仓/逐仓</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th class="th-closed">平仓时间</th>
+                                                <th class="th-closed">平仓价格</th>
+                                                <th>总已实现盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="color:#999;"><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-10 09:00</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>5,000</td>
+                                                <td>10x</td>
+                                                <td>50,000</td>
+                                                <td class="text-closed">2025-08-11 14:00</td>
+                                                <td class="text-closed">59,000</td>
+                                                <td class="val-pos">+5,000</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color:#999;"><strong>BTC/USDT</strong></td>
+                                                <td>2025-08-12 10:00</td>
+                                                <td>全仓</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>3,000</td>
+                                                <td>10x</td>
+                                                <td>30,000</td>
+                                                <td class="text-closed">2025-08-13 16:00</td>
+                                                <td class="text-closed">58,800</td>
+                                                <td class="val-pos">+3,000</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========== 方案二：先按 UID 聚合，再按币对分明细 ========== -->
+    <div class="main-card" style="margin-top: 30px;">
+        <h2
+            style="font-size: 16px; font-weight: 600; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e8e8e8;">
+            <i class="fas fa-users" style="color: #1890ff; margin-right: 8px;"></i>
+            方案二：按用户展示
+        </h2>
+        <p style="color: #666; font-size: 13px; margin-bottom: 16px;">
+            同一用户只显示一行，展开查看各币对明细。
+        </p>
+
+        <div style="overflow-x: auto;">
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th style="width:30px;"></th>
+                        <th>序号</th>
+                        <th>用户UID</th>
+                        <th>持有币对</th>
+                        <th class="sortable">总开仓保证金 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable sorted-desc">总仓位价值 <i class="fas fa-sort-down sort-icon"></i></th>
+                        <th class="sortable">总未实现盈亏 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable">总已实现盈亏 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable">合约账户余额 <i class="fas fa-sort sort-icon"></i></th>
+                        <th>用户总入金<br>（包含法币）</th>
+                        <th>用户总出金<br>（包含法币）</th>
+                        <th>用户净入金<br>（包含法币）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 用户 A (81072943) - 持有 BTC + ETH -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">1</td>
+                        <td class="uid">81072943</td>
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                                <span class="badge badge-long">BTC</span>
+                                <span class="badge badge-short">ETH</span>
+                            </div>
+                        </td>
+                        <td>37,833.33</td> <!-- BTC 32,833 + ETH 5,000 -->
+                        <td>670,000</td> <!-- BTC 620,000 + ETH 50,000 -->
+                        <td class="val-neg">-116,924</td> <!-- BTC -115,724 + ETH -1,200 -->
+                        <td class="val-pos">+5,300</td> <!-- BTC +4,500 + ETH +800 -->
+                        <td>3,088,846.86</td>
+                        <td>500,000</td>
+                        <td>0</td>
+                        <td>500,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="12">
+                            <div class="detail-content">
+                                <!-- BTC/USDT 明细 -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fab fa-bitcoin" style="margin-right: 6px;"></i> BTC/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">2笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table" style="margin-bottom: 16px;">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-14 20:41</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>20,833.33</td>
+                                                <td>24x</td>
+                                                <td>500,000</td>
+                                                <td class="val-neg">-127,724</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-14 21:00</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>12,000.00</td>
+                                                <td>10x</td>
+                                                <td>120,000</td>
+                                                <td class="val-pos">+12,000</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-10 10:00</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>5,000.00</td>
+                                                <td>20x</td>
+                                                <td>100,000</td>
+                                                <td class="val-pos">+4,500</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- ETH/USDT 明细 -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fab fa-ethereum" style="margin-right: 6px;"></i> ETH/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">1笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-16 09:30</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>5,000.00</td>
+                                                <td>10x</td>
+                                                <td>50,000</td>
+                                                <td class="val-neg">-1,200</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-15 14:00</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>2,000.00</td>
+                                                <td>10x</td>
+                                                <td>20,000</td>
+                                                <td class="val-pos">+800</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户 B (99283712) - 只持有 SOL -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">2</td>
+                        <td class="uid">99283712</td>
+                        <td>
+                            <span class="badge" style="background:#fff1f0;color:#ff4d4f;">SOL</span>
+                        </td>
+                        <td>12,000.00</td>
+                        <td>240,000</td>
+                        <td class="val-pos">+52,000</td>
+                        <td class="val-neg">-3,200</td>
+                        <td>128,846.86</td>
+                        <td>100,000</td>
+                        <td>20,000</td>
+                        <td>80,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="12">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fas fa-coins" style="margin-right: 6px;"></i> SOL/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">1笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-18 10:20</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>12,000.00</td>
+                                                <td>20x</td>
+                                                <td>240,000</td>
+                                                <td class="val-pos">+52,000</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-17 09:00</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>5,000.00</td>
+                                                <td>20x</td>
+                                                <td>100,000</td>
+                                                <td class="val-neg">-3,200</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户 C (90869549) - 只持有 BTC -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">3</td>
+                        <td class="uid">90869549</td>
+                        <td>
+                            <span class="badge badge-long">BTC</span>
+                        </td>
+                        <td>12,848.85</td>
+                        <td>642,442</td>
+                        <td class="val-pos">+932,650</td>
+                        <td class="val-pos">+3,000</td>
+                        <td>1,588,846.86</td>
+                        <td>200,000</td>
+                        <td>50,000</td>
+                        <td>150,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="12">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fab fa-bitcoin" style="margin-right: 6px;"></i> BTC/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">1笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-04 17:40</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>12,848.85</td>
+                                                <td>50x</td>
+                                                <td>642,442</td>
+                                                <td class="val-pos">+932,650</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-13 14:00</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>3,000.00</td>
+                                                <td>10x</td>
+                                                <td>30,000</td>
+                                                <td class="val-pos">+3,000</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========== 方案三：按板块展示 ========== -->
+    <div class="main-card" style="margin-top: 30px;">
+        <h2
+            style="font-size: 16px; font-weight: 600; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e8e8e8;">
+            <i class="fas fa-layer-group" style="color: #1890ff; margin-right: 8px;"></i>
+            方案三：按板块展示
+        </h2>
+        <p style="color: #666; font-size: 13px; margin-bottom: 16px;">
+            同一用户在同一板块只显示一行，展开查看各币对明细。
+        </p>
+
+        <div style="overflow-x: auto;">
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th style="width:30px;"></th>
+                        <th>序号</th>
+                        <th>用户UID</th>
+                        <th>板块</th>
+                        <th>包含币对</th>
+                        <th class="sortable">总开仓保证金 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable sorted-desc">总仓位价值 <i class="fas fa-sort-down sort-icon"></i></th>
+                        <th class="sortable">总未实现盈亏 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable">总已实现盈亏 <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable">合约账户余额 <i class="fas fa-sort sort-icon"></i></th>
+                        <th>用户总入金</th>
+                        <th>用户总出金</th>
+                        <th>用户净入金</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 用户 A (81072943) - 主流币板块 (BTC + ETH) -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">1</td>
+                        <td class="uid">81072943</td>
+                        <td>
+                            <span class="badge" style="background:#e6f7ff;color:#1890ff;padding:4px 12px;">主流币</span>
+                        </td>
+                        <td>
+                            <span style="color:#666;font-size:12px;">BTC, ETH</span>
+                        </td>
+                        <td>37,833.33</td>
+                        <td>670,000</td>
+                        <td class="val-neg">-116,924</td>
+                        <td class="val-pos">+5,300</td>
+                        <td>3,088,846.86</td>
+                        <td>500,000</td>
+                        <td>0</td>
+                        <td>500,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <!-- BTC 明细 -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fab fa-bitcoin" style="margin-right: 6px;"></i> BTC/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">2笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table" style="margin-bottom: 16px;">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-14 20:41</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>20,833.33</td>
+                                                <td>24x</td>
+                                                <td>500,000</td>
+                                                <td class="val-neg">-127,724</td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-14 21:00</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>12,000.00</td>
+                                                <td>10x</td>
+                                                <td>120,000</td>
+                                                <td class="val-pos">+12,000</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-10 10:00</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>5,000.00</td>
+                                                <td>20x</td>
+                                                <td>100,000</td>
+                                                <td class="val-pos">+4,500</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- ETH 明细 -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fab fa-ethereum" style="margin-right: 6px;"></i> ETH/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">1笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-16 09:30</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>5,000.00</td>
+                                                <td>10x</td>
+                                                <td>50,000</td>
+                                                <td class="val-neg">-1,200</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-15 14:00</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>2,000.00</td>
+                                                <td>10x</td>
+                                                <td>20,000</td>
+                                                <td class="val-pos">+800</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户 A (81072943) - 项目币板块 (SOL + DOGE) -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">2</td>
+                        <td class="uid">81072943</td>
+                        <td>
+                            <span class="badge" style="background:#fff1f0;color:#ff4d4f;padding:4px 12px;">项目币</span>
+                        </td>
+                        <td>
+                            <span style="color:#666;font-size:12px;">SOL, DOGE</span>
+                        </td>
+                        <td>8,500.00</td>
+                        <td>170,000</td>
+                        <td class="val-pos">+18,000</td>
+                        <td class="val-neg">-2,100</td>
+                        <td>3,088,846.86</td>
+                        <td>500,000</td>
+                        <td>0</td>
+                        <td>500,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <!-- SOL 明细 -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fas fa-coins" style="margin-right: 6px;"></i> SOL/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">1笔持仓</span>
+                                    </div>
+                                    <table class="detail-table" style="margin-bottom: 16px;">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-19 14:20</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>5,000.00</td>
+                                                <td>20x</td>
+                                                <td>100,000</td>
+                                                <td class="val-pos">+12,000</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- DOGE 明细 -->
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fas fa-dog" style="margin-right: 6px;"></i> DOGE/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">1笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-20 09:00</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>3,500.00</td>
+                                                <td>20x</td>
+                                                <td>70,000</td>
+                                                <td class="val-pos">+6,000</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-18 11:00</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>2,000.00</td>
+                                                <td>10x</td>
+                                                <td>20,000</td>
+                                                <td class="val-neg">-2,100</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户 B (99283712) - 项目币板块 (SOL) -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">3</td>
+                        <td class="uid">99283712</td>
+                        <td>
+                            <span class="badge" style="background:#fff1f0;color:#ff4d4f;padding:4px 12px;">项目币</span>
+                        </td>
+                        <td>
+                            <span style="color:#666;font-size:12px;">SOL</span>
+                        </td>
+                        <td>12,000.00</td>
+                        <td>240,000</td>
+                        <td class="val-pos">+52,000</td>
+                        <td class="val-neg">-3,200</td>
+                        <td>128,846.86</td>
+                        <td>100,000</td>
+                        <td>20,000</td>
+                        <td>80,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fas fa-coins" style="margin-right: 6px;"></i> SOL/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">1笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-18 10:20</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>12,000.00</td>
+                                                <td>20x</td>
+                                                <td>240,000</td>
+                                                <td class="val-pos">+52,000</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-17 09:00</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>5,000.00</td>
+                                                <td>20x</td>
+                                                <td>100,000</td>
+                                                <td class="val-neg">-3,200</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 用户 C (90869549) - 主流币板块 (BTC only) -->
+                    <tr class="user-row" onclick="toggleDetail(this)">
+                        <td><i class="fas fa-chevron-right expand-btn"></i></td>
+                        <td class="rank">4</td>
+                        <td class="uid">90869549</td>
+                        <td>
+                            <span class="badge" style="background:#e6f7ff;color:#1890ff;padding:4px 12px;">主流币</span>
+                        </td>
+                        <td>
+                            <span style="color:#666;font-size:12px;">BTC</span>
+                        </td>
+                        <td>12,848.85</td>
+                        <td>642,442</td>
+                        <td class="val-pos">+932,650</td>
+                        <td class="val-pos">+3,000</td>
+                        <td>1,588,846.86</td>
+                        <td>200,000</td>
+                        <td>50,000</td>
+                        <td>150,000</td>
+                    </tr>
+                    <tr class="detail-row">
+                        <td colspan="13">
+                            <div class="detail-content">
+                                <div class="detail-section">
+                                    <div class="detail-section-title" style="font-size: 14px; color: #1890ff;">
+                                        <i class="fab fa-bitcoin" style="margin-right: 6px;"></i> BTC/USDT
+                                        <span style="font-weight: normal; color: #666; margin-left: 10px;">1笔持仓 |
+                                            1笔平仓</span>
+                                    </div>
+                                    <table class="detail-table">
+                                        <thead>
+                                            <tr>
+                                                <th>状态</th>
+                                                <th>开仓时间</th>
+                                                <th>方向</th>
+                                                <th>开仓保证金</th>
+                                                <th>杠杆</th>
+                                                <th>仓位价值</th>
+                                                <th>盈亏</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="badge badge-open"
+                                                        style="background:#e6f7ff;color:#1890ff;">持仓</span></td>
+                                                <td>2025-08-04 17:40</td>
+                                                <td><span class="badge badge-short">空</span></td>
+                                                <td>12,848.85</td>
+                                                <td>50x</td>
+                                                <td>642,442</td>
+                                                <td class="val-pos">+932,650</td>
+                                            </tr>
+                                            <tr style="background:#fafafa;">
+                                                <td><span class="badge badge-closed"
+                                                        style="background:#f5f5f5;color:#8c8c8c;">平仓</span></td>
+                                                <td>2025-08-13 14:00</td>
+                                                <td><span class="badge badge-long">多</span></td>
+                                                <td>3,000.00</td>
+                                                <td>10x</td>
+                                                <td>30,000</td>
+                                                <td class="val-pos">+3,000</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 展开/收起详情
+        function toggleDetail(row) {
+            const expandBtn = row.querySelector('.expand-btn');
+            const detailRow = row.nextElementSibling;
+
+            if (detailRow && detailRow.classList.contains('detail-row')) {
+                expandBtn.classList.toggle('open');
+                detailRow.classList.toggle('open');
+            }
+        }
+
+        // 初始化截止时间下拉框 (每15分钟一档)
+        function initEndTimeOptions() {
+            const select = document.getElementById('endTimeSelect');
+            for (let h = 0; h < 24; h++) {
+                for (let m = 0; m < 60; m += 15) {
+                    const hour = h.toString().padStart(2, '0');
+                    const minute = m.toString().padStart(2, '0');
+                    const time = `${hour}:${minute}`;
+                    const option = document.createElement('option');
+                    option.value = time;
+                    option.textContent = time;
+                    select.appendChild(option);
+                }
+            }
+        }
+
+        // 排序功能（示例）
+        document.querySelectorAll('.ranking-table th.sortable').forEach(th => {
+            th.addEventListener('click', function (e) {
+                e.stopPropagation();
+                document.querySelectorAll('.ranking-table th.sortable').forEach(t => {
+                    if (t !== this) {
+                        t.classList.remove('sorted-asc', 'sorted-desc');
+                        t.querySelector('.sort-icon').className = 'fas fa-sort sort-icon';
+                    }
+                });
+                const icon = this.querySelector('.sort-icon');
+                if (this.classList.contains('sorted-asc')) {
+                    this.classList.remove('sorted-asc');
+                    this.classList.add('sorted-desc');
+                    icon.className = 'fas fa-sort-down sort-icon';
+                } else if (this.classList.contains('sorted-desc')) {
+                    this.classList.remove('sorted-desc');
+                    icon.className = 'fas fa-sort sort-icon';
+                } else {
+                    this.classList.add('sorted-asc');
+                    icon.className = 'fas fa-sort-up sort-icon';
+                }
+            });
+        });
+
+        // 初始化
+        initEndTimeOptions();
+    </script>
+
+    <!-- jQuery (required for Select2) -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Initialize Select2 on contract dropdown
+            $('#contractSelect').select2({
+                placeholder: '请选择',
+                allowClear: false,
+                width: '180px',
+                language: {
+                    noResults: function () {
+                        return '未找到匹配合约';
+                    }
+                }
+            });
+
+            // Trigger filter when Select2 value changes
+            $('#contractSelect').on('change', function () {
+                filterTable();
+            });
+
+            // Re-initialize Select2 after updating options
+            const originalUpdateContractOptions = window.updateContractOptions;
+            window.updateContractOptions = function () {
+                originalUpdateContractOptions();
+                $('#contractSelect').trigger('change.select2');
+            };
+        });
+    </script>
+</body>
+
+</html>
